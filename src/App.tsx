@@ -12,10 +12,11 @@ import type { AppSettings, PrintQueueItem } from './types';
 
 const DEFAULT_SETTINGS: AppSettings = {
   autoInvertDark: true,
-  upscale2x: true,
+  upscale2x: false,
   grayscaleContrast: true,
   autoProcess: true,
   language: 'por+eng',
+  profile: 'general',
   separator: 'header',
 };
 
@@ -44,7 +45,7 @@ export default function App() {
   const [theme, setTheme] = useState<ThemeMode>(getInitialTheme);
   const [items, setItems] = useState<PrintQueueItem[]>([]);
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
-  const [previewItem, setPreviewItem] = useState<PrintQueueItem | null>(null);
+  const [previewItemId, setPreviewItemId] = useState<string | null>(null);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [pasteNotice, setPasteNotice] = useState<string | null>(null);
 
@@ -110,26 +111,35 @@ export default function App() {
           // Verifica se o item não foi removido durante o pré-processamento
           if (!itemsRef.current.some((i) => i.id === itemId)) continue;
 
-          updateItemById(itemId, (item) => ({
-            ...item,
-            status: 'processing',
-            progress: 18,
-            statusLabel: 'Iniciando OCR local...',
-            invertedDarkMode: preprocessed.inverted,
-            averageLuminance: preprocessed.averageLuminance,
-            originalSize: {
-              width: preprocessed.originalWidth,
-              height: preprocessed.originalHeight,
-            },
-            processedSize: {
-              width: preprocessed.processedWidth,
-              height: preprocessed.processedHeight,
-            },
-          }));
+          const processedUrl = URL.createObjectURL(preprocessed.blob);
 
-          const extractedText = await offlineOcrService.recognizeImage(
+          updateItemById(itemId, (item) => {
+            if (item.processedUrl) {
+              URL.revokeObjectURL(item.processedUrl);
+            }
+            return {
+              ...item,
+              status: 'processing',
+              progress: 18,
+              statusLabel: 'Iniciando OCR local...',
+              processedUrl,
+              invertedDarkMode: preprocessed.inverted,
+              averageLuminance: preprocessed.averageLuminance,
+              originalSize: {
+                width: preprocessed.originalWidth,
+                height: preprocessed.originalHeight,
+              },
+              processedSize: {
+                width: preprocessed.processedWidth,
+                height: preprocessed.processedHeight,
+              },
+            };
+          });
+
+          const result = await offlineOcrService.recognizeImage(
             preprocessed.blob,
             currentSettings.language,
+            currentSettings.profile,
             (pct, label) => {
               // Mapeia progresso do Tesseract (0..100) para 20..98 na barra
               const mapped = Math.min(98, Math.max(20, Math.round(20 + pct * 0.78)));
@@ -148,7 +158,8 @@ export default function App() {
             status: 'done',
             progress: 100,
             statusLabel: 'Concluído',
-            text: extractedText,
+            text: result.text,
+            confidence: result.confidence,
             isManuallyEdited: false,
           }));
         } catch (err) {
@@ -254,7 +265,10 @@ export default function App() {
   // Limpa Object URLs e termina worker ao desmontar a aplicação
   useEffect(() => {
     return () => {
-      itemsRef.current.forEach((item) => URL.revokeObjectURL(item.thumbnailUrl));
+      itemsRef.current.forEach((item) => {
+        URL.revokeObjectURL(item.thumbnailUrl);
+        if (item.processedUrl) URL.revokeObjectURL(item.processedUrl);
+      });
       void offlineOcrService.terminate();
     };
   }, []);
@@ -286,10 +300,11 @@ export default function App() {
       const target = prev.find((item) => item.id === id);
       if (target) {
         URL.revokeObjectURL(target.thumbnailUrl);
+        if (target.processedUrl) URL.revokeObjectURL(target.processedUrl);
       }
       return prev.filter((item) => item.id !== id);
     });
-    setPreviewItem((prev) => (prev?.id === id ? null : prev));
+    setPreviewItemId((prev) => (prev === id ? null : prev));
   }, []);
 
   const handleUpdateItemText = useCallback((id: string, text: string) => {
@@ -338,11 +353,19 @@ export default function App() {
   }, [processQueue]);
 
   const handleClearQueue = useCallback(() => {
-    itemsRef.current.forEach((item) => URL.revokeObjectURL(item.thumbnailUrl));
+    itemsRef.current.forEach((item) => {
+      URL.revokeObjectURL(item.thumbnailUrl);
+      if (item.processedUrl) URL.revokeObjectURL(item.processedUrl);
+    });
     pasteCounterRef.current = 0;
-    setPreviewItem(null);
+    setPreviewItemId(null);
     setItems([]);
   }, []);
+
+  const previewItem = useMemo(
+    () => items.find((item) => item.id === previewItemId) ?? null,
+    [items, previewItemId]
+  );
 
   const consolidatedText = useMemo(
     () => buildConsolidatedText(items, settings.separator),
@@ -394,7 +417,7 @@ export default function App() {
             onRemoveItem={handleRemoveItem}
             onUpdateItemText={handleUpdateItemText}
             onReprocessItem={handleReprocessItem}
-            onPreviewItem={setPreviewItem}
+            onPreviewItem={(item) => setPreviewItemId(item.id)}
           />
         </div>
 
@@ -417,7 +440,7 @@ export default function App() {
         </div>
       )}
 
-      <ImagePreviewModal item={previewItem} onClose={() => setPreviewItem(null)} />
+      <ImagePreviewModal item={previewItem} onClose={() => setPreviewItemId(null)} />
       <HowItWorksModal open={isHelpOpen} onClose={() => setIsHelpOpen(false)} />
     </div>
   );

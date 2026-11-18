@@ -58,9 +58,9 @@ export function HowItWorksModal({ open, onClose }: HowItWorksModalProps) {
           <div className="flex gap-3 rounded-lg border border-[#E5E7EB] bg-[#F9FAFB] p-3.5 dark:border-[#27272A] dark:bg-[#111113]">
             <Cpu className="mt-0.5 h-4 w-4 shrink-0 text-[#3B82F6]" />
             <div>
-              <p className="font-medium text-[#111827] dark:text-[#F4F4F5]">Pré-processamento para Prints</p>
+              <p className="font-medium text-[#111827] dark:text-[#F4F4F5]">Pré-processamento &amp; Perfis de Leitura</p>
               <p className="mt-1">
-                Antes do OCR, cada captura passa por um <code className="text-[#1E40AF] dark:text-[#93C5FD]">&lt;canvas&gt;</code> offscreen: imagens com fundo escuro (luminância média &lt; 128) são invertidas automaticamente, ampliadas em 2x para fontes pequenas e convertidas para escala de cinza com reforço de contraste.
+                Antes do OCR (configurado a <code className="text-[#1E40AF] dark:text-[#93C5FD]">300 DPI</code>), cada captura recebe margem branca em um <code className="text-[#1E40AF] dark:text-[#93C5FD]">&lt;canvas&gt;</code> offscreen, inversão automática de tema escuro, normalização de níveis (auto-levels) e escolha de perfil (<code className="text-[#1E40AF] dark:text-[#93C5FD]">Geral</code>, <code className="text-[#1E40AF] dark:text-[#93C5FD]">Código / Hex</code> ou <code className="text-[#1E40AF] dark:text-[#93C5FD]">Cards / Esparso</code>).
               </p>
             </div>
           </div>

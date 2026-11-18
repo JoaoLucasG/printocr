@@ -4,6 +4,8 @@ export type OcrStatus = 'pending' | 'preprocessing' | 'processing' | 'done' | 'e
 
 export type OcrLanguage = 'por+eng' | 'por' | 'eng';
 
+export type OcrProfile = 'general' | 'code' | 'sparse';
+
 export type SeparatorMode = 'header' | 'double-newline' | 'none';
 
 export interface PrintQueueItem {
@@ -11,10 +13,12 @@ export interface PrintQueueItem {
   name: string;
   file: File;
   thumbnailUrl: string;
+  processedUrl?: string;
   status: OcrStatus;
   progress: number; // 0 to 100
   statusLabel: string;
   text: string;
+  confidence?: number;
   error?: string;
   invertedDarkMode: boolean | null;
   averageLuminance: number | null;
@@ -27,5 +31,6 @@ export interface PrintQueueItem {
 export interface AppSettings extends PreprocessOptions {
   autoProcess: boolean;
   language: OcrLanguage;
+  profile: OcrProfile;
   separator: SeparatorMode;
 }

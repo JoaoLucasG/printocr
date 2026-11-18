@@ -184,11 +184,21 @@ export function PrintQueueItemCard({
               </span>
             </div>
 
-            {item.isManuallyEdited && (
-              <span className="text-[10px] font-medium text-[#2563EB] dark:text-[#60A5FA]">
-                editado
-              </span>
-            )}
+            <div className="flex items-center gap-2">
+              {isDone && typeof item.confidence === 'number' && item.confidence < 70 && (
+                <span
+                  title="Confiança baixa — experimente o perfil Código / Hex ou Cards / Esparso"
+                  className="text-[10px] text-amber-600 dark:text-amber-400"
+                >
+                  {item.confidence}% confiança
+                </span>
+              )}
+              {item.isManuallyEdited && (
+                <span className="text-[10px] font-medium text-[#2563EB] dark:text-[#60A5FA]">
+                  editado
+                </span>
+              )}
+            </div>
           </div>
 
           <div className="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-[#E5E7EB] dark:bg-[#27272A]">
